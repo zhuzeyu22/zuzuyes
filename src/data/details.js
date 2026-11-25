@@ -185,6 +185,18 @@ const DETAILS = {
     '统计查询词在语料中的文档频率并计算 IDF|对每个文档累加强度分：IDF × 词频饱和项 × 长度归一项|按总分降序得到相关性排序',
     'IDF(t) = ln(1 + (N−df+0.5)/(df+0.5))\nTF 项 = tf(k1+1)/(tf + k1(1−b+b·len/avgdl))',
     'k1 抑制超高词频的边际收益，b 惩罚长文档；两者是搜索排序最常调的两个超参。'],
+  'image-cnn': [
+    '把带噪字符图切成 12×12 像素网格|逐层做卷积提取局部纹理，再 ReLU 与最大池化压缩尺寸|展平后接全连接与 Softmax 输出类别概率',
+    'for l = 1 .. L:\n  H = ReLU(Conv3×3(H, K_l) + b_l)\n  H = MaxPool2×2(H)\nz = Flatten(H)\ny = Softmax(W·z + b)',
+    '卷积核共享权重让参数量与图像大小解耦；池化带来平移容忍，但层数过多且无残差时会难训练。'],
+  'text-transformer': [
+    '按字切分中文句子并映射成词向量|每层多头注意力让 token 互相聚合信息，再经 FFN 与残差归一化|多层堆叠后平均池化，分类头输出情感概率',
+    'X⁰ = Embed(tokens)\nfor l = 1 .. L:\n  A = Softmax(QKᵀ/√d)\n  X = LayerNorm(X + A·V)\n  X = LayerNorm(X + FFN(X))\ny = Softmax(W·MeanPool(Xᴸ))',
+    '不同头关注不同关系（如「味道↔很好」）；层数增加提升抽象能力，但计算量随 L·n² 增长。'],
+  'cat-cnn-features': [
+    '把 16×16 小猫图送入网络|浅层 3×3 卷积核提边缘，逐层汇合成纹理、耳朵眼睛等部件节点|深层汇总部件证据，分类头给出小猫/小狗/背景判定',
+    'H1 = |Conv3×3(I, K_edge)|        # 边缘\nH2 = Pool(H1) → 纹理/暗斑       # 感受野扩大\nH3 = template-match(H2, 耳/眼/鼻) # 部件节点\nH4 = Σ w·H3 → Softmax(W·H4)      # 整体判定',
+    '单个浅层节点只对应一条边或一种纹理，「猫」是多层组合后的涌现结果；遮挡耳朵或眼睛会让对应部件节点与最终判定同时变弱。演示用固定滤波器揭示机制，真实 CNN 的滤波器从数据中学得。'],
 };
 
 export const getDetail = (id) => {
