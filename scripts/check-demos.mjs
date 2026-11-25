@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PALETTE } from '../src/demos/utils.js';
-import { BY_ID } from '../src/data/catalog.js';
+import { ALGORITHMS, BY_ID } from '../src/data/catalog.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const defDir = path.join(root, 'src/demos/definitions');
@@ -14,6 +14,12 @@ const outDir = path.join(root, '.demo-check');
 const files = fs.readdirSync(defDir).filter((f) => f.endsWith('.jsx')).sort();
 
 if (!files.length) { console.error('没有找到演示文件'); process.exit(1); }
+const definedIds = new Set(files.map((f) => f.replace(/\.jsx$/, '')));
+const missingIds = ALGORITHMS.filter((a) => !definedIds.has(a.id)).map((a) => a.id);
+if (missingIds.length) {
+  console.error(`目录中有 ${missingIds.length} 个算法缺少演示：${missingIds.join(', ')}`);
+  process.exit(1);
+}
 fs.mkdirSync(outDir, { recursive: true });
 
 await build({
