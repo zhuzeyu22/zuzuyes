@@ -1,4 +1,4 @@
-# 文件名沿用 jekyll-gh-pages.yml，但实际部署的是 Vite 构建产物 dist/。
+# Vite 项目部署到 GitHub Pages：构建 dist/ 并发布为 Pages artifact。
 # 仓库设置：Settings → Pages → Build and deployment → Source 选 "GitHub Actions"。
 name: Deploy Vite Site to GitHub Pages
 
