@@ -2,7 +2,8 @@ import React from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { ALGORITHMS, BY_ID, CATEGORIES, LEVELS, COMPARE_GROUPS } from '../data/catalog.js';
 import { getDetail } from '../data/details.js';
-import { getDemo, hasDemo, relatedOf, compareItems } from '../demos/registry.js';
+import { hasDemo, relatedOf, compareItems } from '../demos/registry.js';
+import { useDemo } from '../demos/useDemo.js';
 import DemoRunner from '../demos/DemoRunner.jsx';
 import AlgorithmCard from '../components/AlgorithmCard.jsx';
 import { LevelBadge } from '../components/Layout.jsx';
@@ -14,7 +15,7 @@ export default function AlgorithmPage() {
 
   const cat = CATEGORIES.find((c) => c.id === a.cat);
   const detail = getDetail(id);
-  const def = getDemo(id);
+  const { def, loading } = useDemo(id);
   const related = relatedOf(id);
   const idx = ALGORITHMS.findIndex((x) => x.id === id);
   const prev = ALGORITHMS[idx - 1], next = ALGORITHMS[idx + 1];
@@ -53,7 +54,17 @@ export default function AlgorithmPage() {
         </section>
       )}
 
-      {!def && (
+      {!def && loading && (
+        <section className="demo-pending demo-loading">
+          <div className="dp-icon">◌</div>
+          <div>
+            <b>交互演示加载中…</b>
+            <p>正在按需加载该算法的演示模块。</p>
+          </div>
+        </section>
+      )}
+
+      {!def && !loading && (
         <section className="demo-pending">
           <div className="dp-icon">◇</div>
           <div>
@@ -88,7 +99,7 @@ export default function AlgorithmPage() {
             <tr><td>难度</td><td><LevelBadge level={a.level} small /> {LEVELS[a.level].desc}</td></tr>
             <tr><td>时间复杂度</td><td><code>{a.time}</code></td></tr>
             <tr><td>空间复杂度</td><td><code>{a.space}</code></td></tr>
-            <tr><td>交互演示</td><td>{def ? '已支持' : '待补齐'}</td></tr>
+            <tr><td>交互演示</td><td>{hasDemo(id) ? '已支持' : '待补齐'}</td></tr>
             {a.compare && <tr><td>对比组</td><td><Link to={`/compare/${a.compare}`}>{COMPARE_GROUPS[a.compare]?.name}</Link></td></tr>}
           </tbody></table>
           {detail?.pseudo && (

@@ -1,21 +1,34 @@
-// 自动注册：definitions/ 下任何 .jsx 文件只要 export default 一个带 id 的 def，
-// 就会被自动识别为交互演示，无需手工维护 import 列表。
+// 演示注册与索引。
+// 列表页只需要 id 清单（manifest.js），演示代码按需动态加载，避免把 204 个定义打进入口 chunk。
 import { ALGORITHMS, COMPARE_GROUPS, CATEGORIES, BY_ID } from '../data/catalog.js';
+import { DEMO_IDS, DEMO_ID_SET, DEMO_CONFIGS } from './manifest.js';
 
-const modules = import.meta.glob('./definitions/*.jsx', { eager: true });
+// 只建立 loader 映射，不在构建期执行任何 demo 模块。
+// 手写演示走 definitions/<id>.jsx；批量补齐的演示直接走分类配置，省掉 158 个包装 chunk。
+const loaders = import.meta.glob('./definitions/*.jsx');
+const configLoaders = import.meta.glob('./configs/*.jsx');
 
-export const DEMOS = {};
-Object.keys(modules).sort().forEach((path) => {
-  const def = modules[path]?.default;
-  if (def && def.id) DEMOS[def.id] = def;
-  else console.warn('[algo-atlas] 忽略无效的 demo 定义：', path);
-});
+export const demoIds = DEMO_IDS;
+export const hasDemo = (id) => DEMO_ID_SET.has(id);
+export const demoCount = DEMO_IDS.length;
 
-export const hasDemo = (id) => Boolean(DEMOS[id]);
-export const demoCount = Object.keys(DEMOS).length;
-export const getDemo = (id) => DEMOS[id];
+/** 按需加载单个演示定义；返回 null 表示该算法没有演示。 */
+export async function loadDemo(id) {
+  const cfg = DEMO_CONFIGS[id];
+  if (cfg) {
+    const loader = configLoaders[`./configs/${cfg}`];
+    if (!loader) return null;
+    const mod = await loader();
+    const def = mod.default?.[id];
+    return def ? { id, ...def } : null;
+  }
+  const loader = loaders[`./definitions/${id}.jsx`];
+  if (!loader) return null;
+  const mod = await loader();
+  return mod.default || null;
+}
 
-export const compareItems = (group) => ALGORITHMS.filter((a) => a.compare === group && DEMOS[a.id]);
+export const compareItems = (group) => ALGORITHMS.filter((a) => a.compare === group && hasDemo(a.id));
 export const compareGroups = () => Object.keys(COMPARE_GROUPS)
   .map((id) => ({ id, ...COMPARE_GROUPS[id], items: compareItems(id) }))
   .filter((g) => g.items.length >= 2);

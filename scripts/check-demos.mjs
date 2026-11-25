@@ -7,11 +7,17 @@ import { build } from 'esbuild';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PALETTE } from '../src/demos/utils.js';
 import { ALGORITHMS, BY_ID } from '../src/data/catalog.js';
+import { DEMO_IDS } from '../src/demos/manifest.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const defDir = path.join(root, 'src/demos/definitions');
+const genDir = path.join(root, 'src/demos/generated');
 const outDir = path.join(root, '.demo-check');
-const files = fs.readdirSync(defDir).filter((f) => f.endsWith('.jsx')).sort();
+const files = [...new Set([
+  ...fs.readdirSync(defDir),
+  ...(fs.existsSync(genDir) ? fs.readdirSync(genDir) : []),
+])].filter((f) => f.endsWith('.jsx')).sort();
+const filePaths = files.map((f) => path.join(fs.existsSync(path.join(defDir, f)) ? defDir : genDir, f));
 
 if (!files.length) { console.error('没有找到演示文件'); process.exit(1); }
 const definedIds = new Set(files.map((f) => f.replace(/\.jsx$/, '')));
@@ -20,10 +26,17 @@ if (missingIds.length) {
   console.error(`目录中有 ${missingIds.length} 个算法缺少演示：${missingIds.join(', ')}`);
   process.exit(1);
 }
+const manifestSet = new Set(DEMO_IDS);
+const manifestExtra = DEMO_IDS.filter((id) => !definedIds.has(id));
+const manifestMissing = [...definedIds].filter((id) => !manifestSet.has(id));
+if (manifestExtra.length || manifestMissing.length) {
+  console.error(`演示清单与定义不一致：多余 ${manifestExtra.join(', ') || '无'}；缺失 ${manifestMissing.join(', ') || '无'}`);
+  process.exit(1);
+}
 fs.mkdirSync(outDir, { recursive: true });
 
 await build({
-  entryPoints: files.map((f) => path.join(defDir, f)),
+  entryPoints: filePaths,
   outdir: outDir,
   bundle: true,
   format: 'esm',
@@ -47,7 +60,9 @@ let ok = 0, fail = 0;
 const problems = [];
 for (const f of files) {
   const id = f.replace(/\.jsx$/, '');
-  const mod = await import(pathToFileURL(path.join(outDir, f.replace(/\.jsx$/, '.js'))).href + `?v=${Date.now()}`);
+  const sub = fs.existsSync(path.join(defDir, f)) ? 'definitions' : 'generated';
+  const outFile = path.join(outDir, sub, f.replace(/\.jsx$/, '.js'));
+  const mod = await import(pathToFileURL(outFile).href + `?v=${Date.now()}`);
   const def = mod.default;
   const errs = [];
   try {

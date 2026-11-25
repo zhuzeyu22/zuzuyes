@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { COMPARE_GROUPS, LEVELS } from '../data/catalog.js';
-import { compareItems, getDemo } from '../demos/registry.js';
+import { compareItems } from '../demos/registry.js';
+import { useDemos } from '../demos/useDemo.js';
 import DemoRunner, { defaultParams } from '../demos/DemoRunner.jsx';
 import { LevelBadge } from '../components/Layout.jsx';
 
@@ -9,17 +10,21 @@ export default function ComparePage() {
   const { group } = useParams();
   const info = COMPARE_GROUPS[group];
   const items = compareItems(group);
+  const itemKey = items.map((x) => x.id).join('|');
+  const { defs: loaded, loading } = useDemos(itemKey ? itemKey.split('|') : []);
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(5);
   const [paramsMap, setParamsMap] = useState(null);
   const [layout, setLayout] = useState(2);
 
-  const defs = useMemo(() => items.map((it) => ({ it, def: getDemo(it.id) })).filter((x) => x.def), [group]);
+  const defs = useMemo(() => loaded
+    .map(({ id, def }) => ({ it: items.find((x) => x.id === id), def }))
+    .filter((x) => x.it), [loaded, itemKey]);
   useEffect(() => {
     setParamsMap(Object.fromEntries(defs.map(({ it, def }) => [it.id, defaultParams(def)])));
     setIdx(0); setPlaying(false);
-  }, [group]);
+  }, [itemKey, defs]);
 
   const paramsKey = JSON.stringify(paramsMap);
   const maxSteps = useMemo(() => {
@@ -50,7 +55,7 @@ export default function ComparePage() {
       </div>
     </div>
   );
-  if (!paramsMap) return <div className="page"><p>正在准备演示…</p></div>;
+  if (loading || !paramsMap) return <div className="page"><p>正在准备演示…</p></div>;
 
   const controller = { idx, playing, speed, setIdx, setPlaying, setSpeed };
   const syncParams = () => {
