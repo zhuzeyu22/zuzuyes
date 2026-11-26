@@ -262,7 +262,7 @@ const RAW = [
 
   ['image-cnn', '多层 CNN 图像识别', 'Deep CNN for Images', 'dl', '网络结构', 2, '把 12×12 字符图逐级卷积、ReLU、池化并展平分类，展示从像素到类别标签的完整前向链路。', 'O(Σ k²·HW·C)', 'O(特征图)', '图像,多层卷积,池化,分类', ''],
   ['text-transformer', '多层 Transformer 文本理解', 'Stacked Transformer for Text', 'llm', '模型结构', 3, '把中文句子切成 token，逐层堆叠多头自注意力与前馈网络，最终池化成情感分类。', 'O(L·n²d + L·nd²)', 'O(L·n²)', '文本,多头注意力,多层,情感分类', ''],
-  ['cat-cnn-features', '小猫图像的分层特征', 'Feature Hierarchy in a CNN', 'dl', '网络结构', 2, '用小猫图逐层观察节点偏好：浅层响应边缘、中层响应纹理、深层响应耳朵与眼睛等部件，最终汇成整体判定。', 'O(Σ k²·HW·C)', 'O(特征图)', '图像,特征层级,感受野,部件, CNN', ''],
+  ['cat-cnn-features', '真实照片的分层特征涌现', 'Feature Hierarchy in a CNN', 'dl', '网络结构', 2, '用真实小猫照片逐步演示卷积扫描、ReLU、池化、跨通道汇合与部件匹配，观察特征如何在节点中从边缘涌现到猫脸判定。', 'O(Σ k²·HW·C)', 'O(特征图)', '真实图片,图像,特征层级,感受野,部件,CNN', ''],
 
   // __APPEND_POINT__
 ];
