@@ -226,6 +226,7 @@ export const DEMO_CONFIGS = {
   'batch-norm': 'dl.jsx',
   'bayes-inference': 'math.jsx',
   'bellman-ford': 'graph.jsx',
+  'bfs': 'graph.jsx',
   'binary-answer': 'math.jsx',
   'binary-heap': 'data-structures.jsx',
   'bipartite-matching': 'graph.jsx',

@@ -22,7 +22,8 @@ export const CATEGORIES = [
 
 export const COMPARE_GROUPS = {
   sorting: { name: '六大排序横向对比', desc: '同一组数据、同一初始分布，同步观察比较次数、交换次数与收敛速度', hint: '把初始分布改成「近乎有序」或「逆序」，差异最明显' },
-  path: { name: '图遍历与最短路', desc: 'BFS 与 Dijkstra 在不同图密度下的扩展顺序', hint: '关注已确定集合如何扩大' },
+  traversal: { name: '图遍历对比', desc: '同一张图、同一种子下，队列按层扩张与栈深入回溯的差异', hint: '改起始节点或调高边密度，看两种遍历如何重新展开' },
+  path: { name: '最短路算法对比', desc: 'Dijkstra 与 A* 在不同图密度下的扩展顺序', hint: '关注已确定集合如何扩大' },
   clustering: { name: '聚类算法对比', desc: 'K-Means 与 DBSCAN 对非球形、含噪声数据的表现', hint: 'DBSCAN 不需要预设簇数，但依赖 eps' },
   classifier: { name: '分类器决策边界', desc: 'KNN / 逻辑回归 / 决策树 / SVM 的边界形状', hint: '调大数据重叠度，看谁更容易过拟合' },
   sampling: { name: '解码策略对比', desc: 'Temperature / Top-k / Top-p / Beam Search 的输出分布', hint: '温度越低分布越尖，输出越确定' },
@@ -98,8 +99,8 @@ const RAW = [
   ['consistent-hashing', '一致性哈希', 'Consistent Hashing', 'data-structures', '哈希', 3, '把节点与键映射到环上，扩缩容只迁移相邻分片的数据。', 'O(log n)', 'O(n)', '分布式,虚拟节点', ''],
 
   // ── 图论 ────────────────────────────────────────────────────
-  ['bfs', '广度优先搜索', 'BFS', 'graph', '图遍历', 1, '按层用队列扩张，首次访问即无权图最短路径。', 'O(V+E)', 'O(V)', '队列,最短步数', 'path'],
-  ['dfs', '深度优先搜索', 'DFS', 'graph', '图遍历', 1, '沿一条路走到底再回溯，用于连通性、拓扑与环检测。', 'O(V+E)', 'O(V)', '栈/递归', ''],
+  ['bfs', '广度优先搜索', 'BFS', 'graph', '图遍历', 1, '按层用队列扩张，首次访问即无权图最短路径。', 'O(V+E)', 'O(V)', '队列,最短步数', 'traversal'],
+  ['dfs', '深度优先搜索', 'DFS', 'graph', '图遍历', 1, '沿一条路走到底再回溯，用于连通性、拓扑与环检测。', 'O(V+E)', 'O(V)', '栈/递归', 'traversal'],
   ['topological-sort', '拓扑排序', 'Topological Sort', 'graph', '有向图', 2, '反复取入度为 0 的节点，得到依赖关系的线性顺序。', 'O(V+E)', 'O(V)', 'DAG,任务调度', ''],
   ['dijkstra', 'Dijkstra 最短路', "Dijkstra's Algorithm", 'graph', '最短路', 2, '贪心取出当前距离最小的点并松弛其邻边，要求边权非负。', 'O((V+E)log V)', 'O(V)', '堆优化,非负权', 'path'],
   ['bellman-ford', 'Bellman-Ford', 'Bellman-Ford', 'graph', '最短路', 2, '对所有边松弛 V-1 轮，可处理负权边并检测负环。', 'O(VE)', 'O(V)', '负权,负环检测', ''],

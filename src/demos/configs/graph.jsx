@@ -211,6 +211,119 @@ const graph = {
     },
   },
 
+  /* ───────────────────────── BFS ───────────────────────── */
+  bfs: {
+    params: [
+      { key: 'nodeCount', label: '节点数量', type: 'range', min: 5, max: 10, step: 1, default: 7 },
+      { key: 'density', label: '额外边密度', type: 'range', min: 20, max: 80, step: 10, default: 45, unit: '%' },
+      { key: 'seed', label: '随机种子', type: 'range', min: 1, max: 30, step: 1, default: 7 },
+      { key: 'start', label: '起始节点', type: 'range', min: 0, max: 4, step: 1, default: 0 },
+    ],
+    height: 470,
+    legend: [
+      { color: P.primary, label: '当前出队节点' },
+      { color: P.warning, label: '队列中' },
+      { color: P.success, label: '已访问 / BFS 树边' },
+      { color: P.muted, label: '未访问节点' },
+    ],
+    hint: '用队列按层扩张：同一层全部出队后才进入下一层，首次发现即无权图最短步数。',
+
+    buildSteps(p) {
+      const N = p.nodeCount;
+      const rnd = mulberry32(p.seed * 571 + 13);
+      const edges = makeUndirected(N, rnd, p.density, 1);
+      const adj = Array.from({ length: N }, () => []);
+      edges.forEach((e) => { adj[e.u].push(e.v); adj[e.v].push(e.u); });
+      adj.forEach((a) => a.sort((x, y) => x - y));
+      const start = Math.min(N - 1, Math.max(0, p.start));
+      const visited = Array(N).fill(false);
+      const dist = Array(N).fill(-1);
+      const parent = Array(N).fill(-1);
+      const queue = [start];
+      let head = 0;
+      const order = [start];
+      visited[start] = true;
+      dist[start] = 0;
+      const steps = [];
+      const push = (note, extra = {}) => steps.push({
+        nodeCount: N, start,
+        edges: edges.map((e) => ({ ...e })),
+        visited: [...visited], dist: [...dist], parent: [...parent],
+        queue: queue.slice(head), order: [...order],
+        current: -1, focus: null, done: false,
+        frame: steps.length, note: String(note),
+        metrics: {
+          已访问节点: order.length, 队列长度: queue.length - head,
+          BFS树边: parent.filter((x) => x >= 0).length,
+          当前层: head < queue.length ? dist[queue[head]] : 0,
+        },
+        ...extra,
+      });
+      push(`生成 ${N} 个节点的无向图（${edges.length} 条边），从节点 ${start} 开始广度优先搜索。`);
+      for (let i = 0; i < N; i++) push(`初始化节点 ${i}：未访问，层号 -1。`);
+      push(`节点 ${start} 入队，层号 0，作为访问序第 1 位。`);
+      while (head < queue.length) {
+        const u = queue[head++];
+        push(`出队节点 ${u}（层 ${dist[u]}），检查 ${String(adj[u].length)} 个邻居。`, { current: u });
+        for (const v of adj[u]) {
+          if (visited[v]) {
+            push(`邻居 ${v} 已访问，跳过：首次发现时的层号即为最短步数。`, { current: u, focus: [u, v] });
+          } else {
+            visited[v] = true;
+            dist[v] = dist[u] + 1;
+            parent[v] = u;
+            queue.push(v);
+            order.push(v);
+            push(`发现节点 ${v}：层 ${dist[v]}，经树边 ${u}→${v} 入队。`, { current: u, focus: [u, v] });
+          }
+        }
+      }
+      push(`BFS 完成，访问序为 [${order.join(', ')}]，最远层 ${String(Math.max(...dist))}。`, {
+        done: true, current: -1, focus: null,
+      });
+      return finalize(steps);
+    },
+
+    render(snap, p, c) {
+      const N = snap.nodeCount || p.nodeCount || 1;
+      const order = snap.order || [];
+      const nodes = circleLayout(N).map((n) => {
+        let state = 'idle';
+        if (snap.visited && snap.visited[n.id]) state = 'done';
+        if ((snap.queue || []).indexOf(n.id) >= 0) state = 'warn';
+        if (n.id === snap.current) state = 'current';
+        const seq = order.indexOf(n.id) + 1;
+        return {
+          id: n.id, x: n.x, y: n.y, state,
+          sub: seq > 0 ? String(seq) : '',
+        };
+      });
+      const edges = (snap.edges || []).map((e) => {
+        const isTree = snap.parent && snap.parent[e.v] === e.u;
+        let state = isTree ? 'done' : 'idle';
+        const f = snap.focus;
+        if (f && Math.min(f[0], f[1]) === e.u && Math.max(f[0], f[1]) === e.v) state = 'active';
+        return {
+          from: e.u, to: e.v, state,
+          label: state === 'active' ? '树边' : undefined,
+        };
+      });
+      const queueItems = (snap.queue || []).map((id) => ({
+        label: String(id),
+        state: id === snap.current ? 'current' : 'done',
+        sub: `层 ${snap.dist && snap.dist[id] >= 0 ? snap.dist[id] : 0}`,
+      }));
+      return <Multi panels={[
+        { h: 280, el: <GraphView c={c} nodes={nodes} edges={edges} directed={false} height={280}
+          title="广度优先搜索（节点下标=访问序）"
+          subtitle={`${frameTag(snap)} · 已访问 ${String(order.length)} 个节点`} /> },
+        { h: 190, el: <Flow c={c} items={queueItems} height={190}
+          title="BFS 队列（队首 → 队尾）" subtitle="出队即扩展一层"
+          activeIndex={0} /> },
+      ]} />;
+    },
+  },
+
   /* ───────────────────── 2. Topological Sort ───────────────────── */
   'topological-sort': {
     params: [
