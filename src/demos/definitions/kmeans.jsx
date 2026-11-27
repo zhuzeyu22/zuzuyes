@@ -1,5 +1,6 @@
 import React from 'react';
 import { mulberry32, clamp } from '../utils.js';
+import { datasetParam, scatterPoints, dataLabel } from '../datasets/adapter.js';
 
 const W = 720, H = 320;
 const PX0 = 46, PX1 = 410, PY0 = 34, PY1 = 264;
@@ -60,6 +61,7 @@ function initCentroids(pts, k, init, rnd) {
 export default {
   id: 'kmeans',
   params: [
+    datasetParam('iris', ['iris', 'wine']),
     { key: 'k', label: '簇数 k', type: 'range', min: 2, max: 6, step: 1, default: 3 },
     { key: 'n', label: '样本数', type: 'range', min: 20, max: 180, step: 1, default: 90 },
     { key: 'trueK', label: '真实簇数', type: 'range', min: 2, max: 6, step: 1, default: 3 },
@@ -85,7 +87,8 @@ export default {
     const init = p.init || 'random';
     const seed = (Number(p.seed) || 21) >>> 0;
     const rnd = mulberry32(seed);
-    const pts = genData(n, trueK, (seed * 13 + 5) >>> 0);
+    const pts = scatterPoints(p, 'iris', () => genData(n, trueK, (seed * 13 + 5) >>> 0), 2, 3);
+    const source = dataLabel(p, 'iris');
     let centroids = initCentroids(pts, k, init, rnd);
     const assign = new Array(n).fill(-1);
     const inertia = () => {
@@ -104,7 +107,7 @@ export default {
     const push = (note, phase, round, batch, moved) => steps.push({
       centroids: centroids.map((ce) => [...ce]), assign: [...assign], pts,
       hist: hist.slice(), phase, round, batch, moved: moved || [],
-      note,
+      note: `${note} 数据来源：${source}。`,
       metrics: { 轮次: round, 簇数k: k, 目标函数: safe(inertia()), 已分配: assign.filter((a) => a >= 0).length },
     });
     push(`用「${init === 'farthest' ? '最远点' : '随机'}」初始化 ${k} 个质心，并完成首次分配，inertia=${hist[0].toFixed(1)}。`, '初始', 0, 0, []);

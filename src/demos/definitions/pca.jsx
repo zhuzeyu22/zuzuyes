@@ -1,5 +1,6 @@
 import React from 'react';
 import { mulberry32, clamp } from '../utils.js';
+import { datasetParam, scatterPoints, dataLabel } from '../datasets/adapter.js';
 
 const W = 720, H = 320;
 const PX0 = 46, PX1 = 410, PY0 = 34, PY1 = 262;
@@ -26,6 +27,7 @@ function arrow(x0, y0, x1, y1, color, width) {
 export default {
   id: 'pca',
   params: [
+    datasetParam('iris', ['iris', 'wine']),
     { key: 'angle', label: '数据旋转角(°)', type: 'range', min: 0, max: 180, step: 5, default: 35 },
     { key: 'ratio', label: '主轴/次轴方差比', type: 'range', min: 1, max: 12, step: 0.5, default: 5 },
     { key: 'n', label: '样本数', type: 'range', min: 20, max: 220, step: 1, default: 90 },
@@ -51,18 +53,23 @@ export default {
     const rnd = mulberry32(seed);
     const s1 = Math.sqrt(ratio) * 0.55, s2 = 0.55;
     const a = (angle * Math.PI) / 180, ca = Math.cos(a), sa = Math.sin(a);
-    const raw = [];
-    for (let i = 0; i < n; i++) {
-      const u = gauss(rnd) * s1, v = gauss(rnd) * s2;
-      raw.push({ x: clamp(u * ca - v * sa, -2, 2), y: clamp(u * sa + v * ca, -2, 2) });
-    }
+    const raw = scatterPoints(p, 'iris', () => {
+      const arr = [];
+      for (let i = 0; i < n; i++) {
+        const u = gauss(rnd) * s1, v = gauss(rnd) * s2;
+        arr.push({ x: clamp(u * ca - v * sa, -2, 2), y: clamp(u * sa + v * ca, -2, 2) });
+      }
+      return arr;
+    }, 2, 3);
+    const m = raw.length || 1;
     let mx = 0, my = 0;
     for (const q of raw) { mx += q.x; my += q.y; }
-    mx /= n; my /= n;
+    mx /= m; my /= m;
     const pts = raw.map((q) => ({ x: q.x - mx, y: q.y - my }));
     let cxx = 0, cxy = 0, cyy = 0;
     for (const q of pts) { cxx += q.x * q.x; cxy += q.x * q.y; cyy += q.y * q.y; }
-    cxx /= n; cxy /= n; cyy /= n;
+    cxx /= m; cxy /= m; cyy /= m;
+    const source = dataLabel(p, 'iris');
     const tr = cxx + cyy, det = cxx * cyy - cxy * cxy;
     const disc = Math.sqrt(Math.max(0, (tr * tr) / 4 - det));
     const l1 = Math.max(0, tr / 2 + disc), l2 = Math.max(0, tr / 2 - disc);
@@ -100,7 +107,7 @@ export default {
       frames.push({
         pts, proj, theta, thetaOpt, e1, e2, l1, l2, keep, lamSum,
         errCurve, minErr, maxErr, sIndex: s, final,
-        note,
+        note: `${note} 数据来源：${source}。`,
         metrics: {
           扫描角: deg, 重构误差: safe(final && keep === 2 ? 0 : err),
           解释方差比: safe(l1 / lamSum), 保留成分: keep,

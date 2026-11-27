@@ -1,6 +1,7 @@
 import React from 'react';
 import { mulberry32, clamp, makePoints, softmax } from '../utils.js';
 import { num, fmt, Frame } from '../kits/primitives.jsx';
+import { datasetParam, scatterPoints, vectorData, dataNote } from '../datasets/adapter.js';
 
 // 机器学习演示配置集合：每个 demo 都是 { params, height, legend, hint, buildSteps, render }。
 // 所有随机性都来自确定性种子；buildSteps / render 均为纯函数。
@@ -283,6 +284,7 @@ export default {
 
   'random-forest': {
     params: [
+      datasetParam('breast', ['breast']),
       { key: 'trees', label: '树的数量 T', type: 'range', min: 10, max: 60, step: 1, default: 30 },
       { key: 'n', label: '样本数', type: 'range', min: 40, max: 120, step: 1, default: 72 },
       { key: 'seed', label: '随机种子', type: 'range', min: 1, max: 40, step: 1, default: 14 },
@@ -297,10 +299,11 @@ export default {
       const n = clamp(Math.round(num(p.n, 72)), 40, 120);
       const seed = num(p.seed, 14) >>> 0;
       const rnd = mulberry32(seed);
-      const pts = makePoints(n, (seed * 17 + 3) >>> 0, 1.2).map((q) => ({
+      const pts = scatterPoints(p, 'breast', () => makePoints(n, (seed * 17 + 3) >>> 0, 1.2).map((q) => ({
         x: q.x, y: q.y,
         cls: (q.x * q.x + q.y * q.y < 0.36 || (q.x > 0.3 && q.y < -0.2)) ? 1 : 0,
-      }));
+      })), 0, 1);
+      const dSrc = dataNote(p, 'breast');
       const query = { x: 0.15, y: 0.1 };
       const grid = [];
       for (let gx = 0; gx < 12; gx++) for (let gy = 0; gy < 12; gy++) {
@@ -324,9 +327,9 @@ export default {
         steps.push({
           pts, grid, forest: forest.slice(), bootstrap: bootstrap || [], query, predQ: safe(pv, 0.5),
           accHist: accHist.slice(), phase, oobCnt: oobCnt.slice(),
-          note,
+          note: `${note} ${dSrc}`,
           metrics: {
-            树数量: forest.length, 样本数: n, '查询P(类B)': safe(pv, 0.5), 袋外准确率: safe(accuracy()),
+            树数量: forest.length, 样本数: pts.length, '查询P(类B)': safe(pv, 0.5), 袋外准确率: safe(accuracy()),
           },
         });
       };
@@ -765,6 +768,7 @@ export default {
 
   'hierarchical-clustering': {
     params: [
+      datasetParam('iris', ['iris', 'wine']),
       { key: 'n', label: '样本数', type: 'range', min: 10, max: 18, step: 1, default: 12 },
       { key: 'linkage', label: '簇间距离定义', type: 'select', default: 'average', options: [
         { value: 'single', label: '最短距离(single)' },
@@ -782,7 +786,8 @@ export default {
       const n = clamp(Math.round(num(p.n, 12)), 10, 18);
       const linkage = p.linkage === 'single' || p.linkage === 'complete' ? p.linkage : 'average';
       const seed = num(p.seed, 23) >>> 0;
-      const pts = makePoints(n, seed, 1.15);
+      const pts = scatterPoints(p, 'iris', () => makePoints(n, seed, 1.15), 2, 3);
+      const dSrc = dataNote(p, 'iris');
       const d = pts.map((a) => pts.map((b) => Math.hypot(a.x - b.x, a.y - b.y)));
       const maxD = Math.max(1e-6, ...d.flat());
       let clusters = pts.map((_, i) => [i]);
@@ -805,7 +810,7 @@ export default {
       const push = (note, phase, merge) => steps.push({
         pts, d: d.map((r) => r.slice()), clusters: clusters.map((cl) => cl.slice()),
         assign: assign(), nodes: nodes.slice(), merge: merge || null, maxD, linkage,
-        note,
+        note: `${note} ${dSrc}`,
         metrics: {
           样本数: n, 当前簇数: clusters.length,
           本次合并距离: safe(merge ? merge.dist : 0), 已合并次数: nodes.length,
@@ -1020,6 +1025,7 @@ export default {
 
   'lda': {
     params: [
+      datasetParam('iris', ['iris', 'wine']),
       { key: 'n', label: '每类样本数', type: 'range', min: 12, max: 30, step: 1, default: 20 },
       { key: 'iters', label: '投影轴迭代次数', type: 'range', min: 20, max: 50, step: 1, default: 30 },
       { key: 'sep', label: '类间分离度', type: 'range', min: 0.4, max: 1.4, step: 0.05, default: 0.9 },
@@ -1036,15 +1042,21 @@ export default {
       const sep = clamp(num(p.sep, 0.9), 0.4, 1.4);
       const seed = num(p.seed, 19) >>> 0;
       const rnd = mulberry32(seed);
-      const centers = [[-0.75 * sep, 0.6 * sep], [0.75 * sep, 0.6 * sep], [0, -0.75 * sep]];
-      const pts = [];
-      for (let t = 0; t < 3; t++) for (let i = 0; i < per; i++) {
-        pts.push({
-          x: clamp(centers[t][0] + gauss(rnd) * 0.28, -1.5, 1.5),
-          y: clamp(centers[t][1] + gauss(rnd) * 0.28, -1.5, 1.5),
-          cls: t,
-        });
-      }
+      const realPts = scatterPoints(p, 'iris', () => [], 2, 3);
+      const useReal = realPts.length > 0;
+      const pts = useReal ? realPts.slice(0, per * 3).map((q) => ({ x: q.x, y: q.y, cls: q.cls })) : (() => {
+        const centers = [[-0.75 * sep, 0.6 * sep], [0.75 * sep, 0.6 * sep], [0, -0.75 * sep]];
+        const arr = [];
+        for (let t = 0; t < 3; t++) for (let i = 0; i < per; i++) {
+          arr.push({
+            x: clamp(centers[t][0] + gauss(rnd) * 0.28, -1.5, 1.5),
+            y: clamp(centers[t][1] + gauss(rnd) * 0.28, -1.5, 1.5),
+            cls: t,
+          });
+        }
+        return arr;
+      })();
+      const dSrc = dataNote(p, 'iris');
       const n = pts.length;
       const mean = pts.reduce((s, q) => [s[0] + q.x / n, s[1] + q.y / n], [0, 0]);
       const mk = [0, 1, 2].map((t) => {
@@ -1079,7 +1091,7 @@ export default {
       };
       const push = (note, phase, round, hist, axis) => steps.push({
         pts, mean, mk, SW, SB, w: axis || w.slice(), hist: hist.slice(), phase, round,
-        note,
+        note: `${note} ${dSrc}`,
         metrics: {
           迭代: round, 样本数: n, 瑞利商: safe(rayleigh()),
           轴角度: safe((Math.atan2(w[1], w[0]) * 180) / Math.PI), 类间散度: safe(quad(SB, w)),
@@ -1146,6 +1158,7 @@ export default {
 
   'tsne': {
     params: [
+      datasetParam('iris', ['iris', 'wine']),
       { key: 'n', label: '样本数', type: 'range', min: 36, max: 54, step: 1, default: 45 },
       { key: 'perp', label: '困惑度', type: 'range', min: 5, max: 15, step: 1, default: 8 },
       { key: 'iters', label: '布局迭代次数', type: 'range', min: 40, max: 120, step: 1, default: 70 },
@@ -1157,17 +1170,25 @@ export default {
     ],
     hint: '先把高维距离转成以困惑度标定带宽的邻域概率 P，再用 t 分布低维概率 Q 拟合 P，梯度下降最小化 KL(P‖Q)。',
     buildSteps(p) {
-      const n = clamp(Math.round(num(p.n, 45)), 36, 54);
+      let n = clamp(Math.round(num(p.n, 45)), 36, 54);
       const perp = clamp(Math.round(num(p.perp, 8)), 5, 15);
       const T = clamp(Math.round(num(p.iters, 70)), 40, 120);
       const seed = num(p.seed, 27) >>> 0;
       const rnd = mulberry32(seed);
+      const realVec = vectorData(p, 'iris', () => null, 4);
+      const useReal = realVec && realVec.length > 0;
+      const labels = useReal ? realVec.map((o) => o.cls) : [];
       const centers = [[-0.9, 0.7, 0.2, 0.1], [0.9, 0.6, -0.2, 0.3], [0, -0.85, 0.4, -0.3]];
-      const X = [];
-      for (let i = 0; i < n; i++) {
-        const ctr = centers[i % 3];
-        X.push(ctr.map((v) => v + gauss(rnd) * 0.34));
-      }
+      const X = useReal ? realVec.map((o) => o.v) : (() => {
+        const arr = [];
+        for (let i = 0; i < n; i++) {
+          const ctr = centers[i % 3];
+          arr.push(ctr.map((v) => v + gauss(rnd) * 0.34));
+        }
+        return arr;
+      })();
+      n = X.length;
+      const dSrc = dataNote(p, 'iris');
       const dist2 = X.map((a) => X.map((b) => a.reduce((s, v, d) => s + (v - b[d]) ** 2, 0)));
       const Pcond = [];
       const targetH = Math.log(perp);
@@ -1222,9 +1243,9 @@ export default {
       const push = (note, phase, round, kl, extra) => {
         const showN = Math.min(10, n);
         steps.push({
-          Y: Y.map((v) => v.slice()), labels: X.map((_, i) => i % 3), Pshow: P.slice(0, showN).map((r) => r.slice(0, showN)),
+          Y: Y.map((v) => v.slice()), labels: useReal ? labels : X.map((_, i) => i % 3), Pshow: P.slice(0, showN).map((r) => r.slice(0, showN)),
           klHist: (extra ? extra.hist : []).slice(), kl: safe(kl || 0), phase, round, perp, n,
-          note,
+          note: `${note} ${dSrc}`,
           metrics: { 迭代: round, 样本数: n, 困惑度: perp, KL散度: safe(kl || 0) },
         });
       };

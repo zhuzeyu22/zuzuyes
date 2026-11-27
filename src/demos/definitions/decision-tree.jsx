@@ -1,5 +1,6 @@
 import React from 'react';
 import { mulberry32, clamp } from '../utils.js';
+import { datasetParam, binaryScatter, dataLabel } from '../datasets/adapter.js';
 
 const W = 720, H = 320;
 const PX0 = 46, PX1 = 406, PY0 = 34, PY1 = 262;
@@ -33,6 +34,7 @@ function impurity(idx, pts, criterion) {
 export default {
   id: 'decision-tree',
   params: [
+    datasetParam('breast', ['breast']),
     { key: 'maxDepth', label: '最大深度', type: 'range', min: 1, max: 6, step: 1, default: 4 },
     { key: 'minLeaf', label: '最小叶样本数', type: 'range', min: 1, max: 12, step: 1, default: 3 },
     { key: 'criterion', label: '分裂准则', type: 'select', default: 'gini', options: [
@@ -55,7 +57,8 @@ export default {
     const criterion = p.criterion === 'entropy' ? 'entropy' : 'gini';
     const n = clamp(Math.round(Number(p.n) || 90), 40, 160);
     const seed = (Number(p.seed) || 8) >>> 0;
-    const pts = genData(n, seed);
+    const pts = binaryScatter(p, 'breast', () => genData(n, seed), 0, 1);
+    const source = dataLabel(p, 'breast');
     const all = Array.from({ length: n }, (_, i) => i);
     const critName = criterion === 'entropy' ? '信息增益' : '基尼增益';
     const cuts = [], leaves = [], gainHist = [], frames = [];
@@ -63,7 +66,7 @@ export default {
     const push = (note, evalLine, bestLine) => frames.push({
       cuts: cuts.slice(), leaves: leaves.slice(), evalLine, bestLine,
       gainHist: gainHist.slice(), pts, criterion,
-      note,
+      note: `${note} 数据来源：${source}。`,
       metrics: {
         准则: critName, 已分裂: splitCount, 叶节点: leaves.length,
         最大深度: maxDepth, 当前最优增益: bestLine ? clamp(bestLine.gain, 0, 1) : 0,

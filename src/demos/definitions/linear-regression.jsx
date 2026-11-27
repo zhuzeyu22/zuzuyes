@@ -1,5 +1,6 @@
 import React from 'react';
 import { mulberry32, clamp } from '../utils.js';
+import { datasetParam, regressionPoints, dataLabel } from '../datasets/adapter.js';
 
 const W = 720, H = 320;
 const PX0 = 46, PX1 = 410, PY0 = 34, PY1 = 262;
@@ -42,6 +43,7 @@ function solve(A, b) {
 export default {
   id: 'linear-regression',
   params: [
+    datasetParam('diabetes', ['diabetes']),
     { key: 'degree', label: '多项式阶数', type: 'range', min: 1, max: 9, step: 1, default: 3, hint: '阶数过高易过拟合' },
     { key: 'noise', label: '噪声强度', type: 'range', min: 0, max: 0.6, step: 0.02, default: 0.18 },
     { key: 'n', label: '样本数', type: 'range', min: 12, max: 100, step: 1, default: 40 },
@@ -64,18 +66,26 @@ export default {
     const iters = clamp(Math.round(Number(p.iters) || 70), 1, 400);
     const lam = p.ridge ? 0.08 : 1e-6;
 
+    const real = regressionPoints(p, 'diabetes', () => [], 2);
+    const useReal = real.length > 0;
+    const m = useReal ? real.length : n;
     const xs = [], ys = [];
-    for (let i = 0; i < n; i++) {
-      const x = clamp(-1 + (2 * (i + 0.5)) / n + (rnd() - 0.5) * 0.02, -1.05, 1.05);
-      xs.push(x);
-      ys.push(truth(x) + noise * gauss(rnd));
+    if (useReal) {
+      for (const q of real) { xs.push(q.x * 2 - 1 + (rnd() - 0.5) * 0.004); ys.push(q.y); }
+    } else {
+      for (let i = 0; i < n; i++) {
+        const x = clamp(-1 + (2 * (i + 0.5)) / n + (rnd() - 0.5) * 0.02, -1.05, 1.05);
+        xs.push(x);
+        ys.push(truth(x) + noise * gauss(rnd));
+      }
     }
-    const order = Array.from({ length: n }, (_, i) => i);
-    for (let i = n - 1; i > 0; i--) {
+    const source = dataLabel(p, 'diabetes');
+    const order = Array.from({ length: m }, (_, i) => i);
+    for (let i = m - 1; i > 0; i--) {
       const j = Math.floor(rnd() * (i + 1));
       [order[i], order[j]] = [order[j], order[i]];
     }
-    const nTr = Math.max(8, Math.round(n * 0.7));
+    const nTr = Math.max(8, Math.round(m * 0.7));
     const train = order.slice(0, nTr).map((i) => ({ x: xs[i], y: ys[i] }));
     const test = order.slice(nTr).map((i) => ({ x: xs[i], y: ys[i] }));
 
@@ -117,7 +127,8 @@ export default {
       steps.push({
         w: [...w], scale, wOpt, degree: deg, train, test,
         histTr: histTr.slice(), histTe: histTe.slice(), optTr: Math.min(optTr, 50),
-        note,
+        useReal,
+        note: `${note} 数据来源：${source}。`,
         metrics: { 阶数: deg, 迭代: t, 训练误差: safe(tr), 测试误差: safe(te), 最优误差: safe(optTr) },
       });
     };
@@ -176,7 +187,7 @@ export default {
         <rect x={PX0} y={PY0} width={PX1 - PX0} height={PY1 - PY0} fill={c.panel} stroke={c.border} />
         <g clipPath="url(#lr-clip)">
           <line x1={PX0} y1={sy(0)} x2={PX1} y2={sy(0)} stroke={c.grid} />
-          <path d={dTruth} fill="none" stroke={c.muted} strokeWidth="1.5" strokeDasharray="4 3" />
+          {!snap.useReal && <path d={dTruth} fill="none" stroke={c.muted} strokeWidth="1.5" strokeDasharray="4 3" />}
           <path d={dOpt} fill="none" stroke={c.purple} strokeWidth="2" strokeDasharray="5 3" />
           <path d={dCur} fill="none" stroke={c.primary} strokeWidth="2.4" />
           {train.map((q, i) => pt(q, c.series[0], 3, `tr${i}`))}
@@ -185,7 +196,7 @@ export default {
         <text x={PX0} y={PY0 - 8} fontSize="11" fill={c.muted}>多项式拟合：样本 + 拟合曲线</text>
         <text x={PX0} y={PY1 + 16} fontSize="10" fill={c.muted}>x ∈ [-1, 1]，阶数 {deg}</text>
         <text x={PX1} y={PY1 + 16} fontSize="10" textAnchor="end" fill={overfit ? c.danger : c.muted}>
-          {overfit ? '高阶 + 小样本 → 过拟合' : '紫虚线=闭式解，灰虚线=真实函数'}
+          {overfit ? '高阶 + 小样本 → 过拟合' : snap.useReal ? '紫虚线=闭式解 · BMI→疾病进展' : '紫虚线=闭式解，灰虚线=真实函数'}
         </text>
         <text x={CX0} y={CY0 - 14} fontSize="11" fill={c.muted}>训练 / 测试误差</text>
         <rect x={CX0} y={CY0} width={CX1 - CX0} height={CY1 - CY0} fill={c.panel} stroke={c.border} />

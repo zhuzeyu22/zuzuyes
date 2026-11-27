@@ -1,5 +1,6 @@
 import React from 'react';
 import { mulberry32, clamp } from '../utils.js';
+import { datasetParam, scatterPoints, dataLabel } from '../datasets/adapter.js';
 
 const W = 720, H = 320;
 const PX0 = 46, PX1 = 410, PY0 = 34, PY1 = 264;
@@ -38,6 +39,7 @@ function genData(n, shape, seed) {
 export default {
   id: 'dbscan',
   params: [
+    datasetParam('iris', ['iris', 'wine']),
     { key: 'eps', label: '邻域半径 ε', type: 'range', min: 0.1, max: 0.6, step: 0.01, default: 0.28 },
     { key: 'minPts', label: '核心点最小邻居 MinPts', type: 'range', min: 2, max: 12, step: 1, default: 4 },
     { key: 'n', label: '样本数', type: 'range', min: 40, max: 160, step: 1, default: 90 },
@@ -62,7 +64,8 @@ export default {
     const minPts = clamp(Math.round(Number(p.minPts) || 4), 1, 30);
     const shape = p.shape || 'blobs';
     const seed = (Number(p.seed) || 5) >>> 0;
-    const pts = genData(n, shape, seed);
+    const pts = scatterPoints(p, 'iris', () => genData(n, shape, seed), 2, 3);
+    const source = dataLabel(p, 'iris');
     const m = pts.length;
     const eps2 = eps * eps;
     // 预计算距离平方矩阵与邻域计数（含自身）
@@ -100,7 +103,7 @@ export default {
       const st = stats();
       steps.push({
         labels: [...labels], pts, isCore, cur, curNbrs: curNbrs || [],
-        eps, minPts, stats: st, note,
+        eps, minPts, stats: st, note: `${note} 数据来源：${source}。`,
         metrics: { 邻域半径: eps, 最小邻居数: minPts, 核心点: st.core, 边界点: st.border, 噪声点: st.noise, 簇数: st.clusters },
       });
     };

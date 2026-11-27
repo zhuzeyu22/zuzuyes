@@ -1,5 +1,6 @@
 import React from 'react';
 import { mulberry32, clamp } from '../utils.js';
+import { datasetParam, binaryScatter, dataLabel } from '../datasets/adapter.js';
 
 const W = 720, H = 320;
 const PX0 = 46, PX1 = 402, PY0 = 34, PY1 = 264;
@@ -42,6 +43,7 @@ function genData(dist, n, seed) {
 export default {
   id: 'logistic-regression',
   params: [
+    datasetParam('breast', ['breast']),
     { key: 'reg', label: '正则强度', type: 'range', min: 0, max: 1, step: 0.01, default: 0.05 },
     { key: 'iters', label: '迭代轮数', type: 'range', min: 20, max: 200, step: 1, default: 60 },
     { key: 'dist', label: '数据分布', type: 'select', default: 'linear', options: [
@@ -65,7 +67,8 @@ export default {
     const reg = clamp(Number(p.reg) || 0, 0, 2);
     const dist = p.dist || 'linear';
     const seed = (Number(p.seed) || 9) >>> 0;
-    const pts = genData(dist, n, seed);
+    const pts = binaryScatter(p, 'breast', () => genData(dist, n, seed), 0, 1);
+    const source = dataLabel(p, 'breast');
     const lr = 0.6;
     let w = [0, 0, 0];
     const lossHist = [], accHist = [];
@@ -84,7 +87,7 @@ export default {
       lossHist.push(Math.min(L, 20)); accHist.push(acc);
       steps.push({
         w: [...w], pts, dist, reg, lossHist: lossHist.slice(), accHist: accHist.slice(),
-        note,
+        note: `${note} 数据来源：${source}。`,
         metrics: { 迭代: t, 损失: safe(L), 训练准确率: acc, 正则强度: reg },
       });
     };

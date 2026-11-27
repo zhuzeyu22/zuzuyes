@@ -1,5 +1,6 @@
 import React from 'react';
 import { mulberry32, clamp } from '../utils.js';
+import { datasetParam, binaryScatter, dataLabel } from '../datasets/adapter.js';
 
 const W = 720, H = 320;
 const PX0 = 46, PX1 = 410, PY0 = 34, PY1 = 264;
@@ -51,6 +52,7 @@ function dot(a, b) {
 export default {
   id: 'svm',
   params: [
+    datasetParam('breast', ['breast']),
     { key: 'C', label: '惩罚系数 C', type: 'range', min: 0.1, max: 10, step: 0.1, default: 1, hint: '越大越不容忍误分' },
     { key: 'overlap', label: '类别重叠度', type: 'range', min: 0, max: 0.8, step: 0.02, default: 0.3 },
     { key: 'kernel', label: '核类型', type: 'select', default: 'linear', options: [
@@ -75,7 +77,8 @@ export default {
     const kernel = p.kernel === 'rbf' ? 'rbf' : 'linear';
     const iters = clamp(Math.round(Number(p.iters) || 80), 1, 400);
     const seed = (Number(p.seed) || 3) >>> 0;
-    const pts = genData(n, overlap, seed);
+    const pts = binaryScatter(p, 'breast', () => genData(n, overlap, seed), 0, 1, true);
+    const source = dataLabel(p, 'breast');
     const rff = makeRFF((seed * 17 + 11) >>> 0);
     const dim = kernel === 'linear' ? 2 : D;
     const PHI = pts.map((q) => phi(q, kernel, rff));
@@ -103,7 +106,7 @@ export default {
       steps.push({
         model: { w: [...w], b, kernel, rff }, pts, C, kernel,
         hingeHist: hingeHist.slice(), t,
-        note,
+        note: `${note} 数据来源：${source}。`,
         metrics: {
           迭代: t, 惩罚系数C: C, hinge损失: safe(ev.hinge),
           支持向量: ev.sv, 间隔宽度: safe(2 / (nrm + 1e-6)),

@@ -60,35 +60,35 @@ const DETAILS = {
   'linear-regression': [
     '构造多项式特征矩阵 X|用最小二乘解 (XᵀX)⁻¹Xᵀy|在测试点上对比拟合误差',
     'w = (XᵀX + λI)⁻¹ Xᵀ y\ny_hat = X·w',
-    '阶数升高会先降误差后急剧过拟合；正则化与交叉验证是控制手段。'],
+    '阶数升高会先降误差后急剧过拟合；正则化与交叉验证是控制手段。 演示默认使用真实数据集（diabetes，UCI / scikit-learn / OpenML，CC BY 4.0），可在「数据来源」参数中切回合成数据对照。'],
   'logistic-regression': [
     '线性打分 z = w·x|经 sigmoid 转成概率|用交叉熵梯度迭代更新并加正则',
     'p = σ(w·x + b)\nL = -[y·log p + (1-y)·log(1-p)] + λ||w||²\nw -= η·Xᵀ(p - y)',
-    '输出是概率，需校准才可直接用于 CTR 出价；线性边界无法拟合环形数据。'],
+    '输出是概率，需校准才可直接用于 CTR 出价；线性边界无法拟合环形数据。 演示默认使用真实数据集（breast，UCI / scikit-learn / OpenML，CC BY 4.0），可在「数据来源」参数中切回合成数据对照。'],
   'knn': [
     '计算查询点到所有训练样本的距离|取距离最小的 k 个邻居|按邻居标签多数投票或加权平均',
     'd_i = ||x - x_i||²\nidx = argsort(d)[:k]\nŷ = mode(y[idx])',
-    'k 小则边界碎、易过拟合；k 大则边界平滑、欠拟合。特征必须标准化。'],
+    'k 小则边界碎、易过拟合；k 大则边界平滑、欠拟合。特征必须标准化。 演示默认使用真实数据集（iris / wine / breast，UCI / scikit-learn / OpenML，CC BY 4.0），可在「数据来源」参数中切回合成数据对照。'],
   'kmeans': [
     '初始化 k 个质心|把每个点分配给最近质心（E 步）|重算各簇均值作为新质心（M 步）',
     'repeat:\n  c_i = argmin_k ||x_i - μ_k||²\n  μ_k = mean(x_i where c_i = k)\nuntil assignments unchanged',
-    '目标函数单调下降但只保证局部最优；k 与初始化敏感，K-Means++ 可缓解。'],
+    '目标函数单调下降但只保证局部最优；k 与初始化敏感，K-Means++ 可缓解。 演示默认使用真实数据集（iris / wine，UCI / scikit-learn / OpenML，CC BY 4.0），可在「数据来源」参数中切回合成数据对照。'],
   'dbscan': [
     '统计每个点 eps 邻域内的点数|邻域点数 ≥ minPts 标记为核心点|从核心点按密度可达扩张成簇',
     'for p in points:\n  if |N_eps(p)| >= minPts:\n    expand_cluster(p, N_eps(p))\nelse if not reachable: mark as noise',
-    '无需预设簇数、能识别任意形状与噪声，但对 eps/minPts 和密度不均很敏感。'],
+    '无需预设簇数、能识别任意形状与噪声，但对 eps/minPts 和密度不均很敏感。 演示默认使用真实数据集（iris / wine，UCI / scikit-learn / OpenML，CC BY 4.0），可在「数据来源」参数中切回合成数据对照。'],
   'decision-tree': [
     '枚举所有特征与候选切分点|按基尼不纯度或信息增益选最优切分|递归划分直到达到停止条件',
     'split = argmax_{(f,t)} ΔGini(D, f, t)\nD_left, D_right = partition(D, split)\nbuild_tree(D_left); build_tree(D_right)',
-    '深度、最小叶样本数、剪枝是控制过拟合的三个旋钮；树边界是轴平行的。'],
+    '深度、最小叶样本数、剪枝是控制过拟合的三个旋钮；树边界是轴平行的。 演示默认使用真实数据集（breast，UCI / scikit-learn / OpenML，CC BY 4.0），可在「数据来源」参数中切回合成数据对照。'],
   'svm': [
     '寻找最大化间隔的分离超平面|引入松弛变量允许少量错分|用核函数把样本映射到高维',
     'min ½||w||² + C·Σξ_i\ns.t. y_i(w·φ(x_i)+b) ≥ 1 - ξ_i',
-    'C 越大越不容错、间隔越窄；只有支持向量影响最终边界。'],
+    'C 越大越不容错、间隔越窄；只有支持向量影响最终边界。 演示默认使用真实数据集（breast，UCI / scikit-learn / OpenML，CC BY 4.0），可在「数据来源」参数中切回合成数据对照。'],
   'pca': [
     '中心化并计算协方差矩阵|求特征值与特征向量，按方差排序|取前 k 个主成分做投影',
     'X̃ = X - mean(X)\nC = X̃ᵀX̃ / n\neig(C) → [v₁…v_d], sort by λ\ndesc\nZ = X̃·V_k',
-    '主成分是方差方向不是分类方向；投影前必须标准化量纲不同的特征。'],
+    '主成分是方差方向不是分类方向；投影前必须标准化量纲不同的特征。 演示默认使用真实数据集（iris / wine，UCI / scikit-learn / OpenML，CC BY 4.0），可在「数据来源」参数中切回合成数据对照。'],
   'gradient-boosting': [
     '以常数或均值作为初始预测|计算当前预测的负梯度（残差）|训练弱学习器拟合残差并按学习率累加',
     'F₀ = argmin_γ Σ L(y_i, γ)\nfor m = 1 .. M:\n  r_i = -∂L/∂F(x_i)\n  h_m = fit_tree(x, r)\n  F_m = F_{m-1} + η·h_m',

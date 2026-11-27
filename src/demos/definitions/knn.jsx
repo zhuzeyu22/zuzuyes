@@ -1,5 +1,6 @@
 import React from 'react';
 import { mulberry32, clamp } from '../utils.js';
+import { datasetParam, scatterPoints, dataLabel, dataNote } from '../datasets/adapter.js';
 
 const W = 720, H = 320;
 const PX0 = 46, PX1 = 410, PY0 = 34, PY1 = 264;
@@ -40,6 +41,7 @@ function vote(px, py, pts, k, weighted) {
 export default {
   id: 'knn',
   params: [
+    datasetParam('iris', ['iris', 'wine', 'breast']),
     { key: 'k', label: '邻居数 k', type: 'range', min: 1, max: 15, step: 1, default: 5, hint: 'k 越小边界越碎' },
     { key: 'n', label: '样本数', type: 'range', min: 20, max: 140, step: 1, default: 60 },
     { key: 'seed', label: '随机种子', type: 'range', min: 1, max: 40, step: 1, default: 12 },
@@ -57,7 +59,8 @@ export default {
     const k = clamp(Math.round(Number(p.k) || 5), 1, 15);
     const weighted = !!p.weighted;
     const seed = (Number(p.seed) || 12) >>> 0;
-    const pts = genData(n, seed);
+    const pts = scatterPoints(p, 'iris', () => genData(n, seed), 2, 3);
+    const source = dataLabel(p, 'iris');
     const kk = Math.min(k, pts.length);
     const qr = mulberry32((seed * 7 + 3) >>> 0);
     const query = { x: (qr() - 0.5) * 1.6, y: (qr() - 0.5) * 1.6 };
@@ -82,8 +85,8 @@ export default {
       steps.push({
         shown: cells.slice(0, count), pts, query, neighbors: vq.neighbors,
         voteScores: vq.scores, queryCls: vq.cls, kk, done, weighted,
-        note,
-        metrics: { 邻居数k: kk, 已着色: count, 网格总数: total, 查询预测: vq.cls + 1 },
+        note: `${note} 数据来源：${source}。`,
+        metrics: { 邻居数k: kk, 已着色: count, 网格总数: total, 查询预测: vq.cls + 1, 数据来源: source },
       });
     }
     return steps;
