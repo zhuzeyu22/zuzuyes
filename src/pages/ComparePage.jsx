@@ -59,6 +59,7 @@ export default function ComparePage() {
 
   const controller = { idx, playing, speed, setIdx, setPlaying, setSpeed };
   const syncParams = () => {
+    if (!defs.length) return;
     const base = paramsMap[defs[0].it.id] || {};
     const next = { ...paramsMap };
     defs.forEach(({ it, def }) => {

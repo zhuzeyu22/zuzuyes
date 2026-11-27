@@ -11,15 +11,16 @@ import { LevelBadge } from '../components/Layout.jsx';
 export default function AlgorithmPage() {
   const { id } = useParams();
   const a = BY_ID[id];
-  if (!a) return <Navigate to="/browse" replace />;
-
-  const cat = CATEGORIES.find((c) => c.id === a.cat);
-  const detail = getDetail(id);
-  const { def, loading } = useDemo(id);
+  const cat = CATEGORIES.find((c) => c.id === a?.cat);
+  const detail = a ? getDetail(id) : null;
+  const { def, loading, error } = useDemo(id);
   const related = relatedOf(id);
   const idx = ALGORITHMS.findIndex((x) => x.id === id);
-  const prev = ALGORITHMS[idx - 1], next = ALGORITHMS[idx + 1];
-  const cmp = a.compare ? compareItems(a.compare) : [];
+  const prev = idx >= 0 ? ALGORITHMS[idx - 1] : null;
+  const next = idx >= 0 ? ALGORITHMS[idx + 1] : null;
+  const cmp = a?.compare ? compareItems(a.compare) : [];
+
+  if (!a) return <Navigate to="/browse" replace />;
 
   return (
     <div className="page algo-page">
@@ -64,7 +65,17 @@ export default function AlgorithmPage() {
         </section>
       )}
 
-      {!def && !loading && (
+      {!def && !loading && error && (
+        <section className="demo-pending">
+          <div className="dp-icon">!</div>
+          <div>
+            <b>交互演示加载失败</b>
+            <p>演示模块加载出错，可刷新页面重试；知识卡内容不受影响。</p>
+          </div>
+        </section>
+      )}
+
+      {!def && !loading && !error && (
         <section className="demo-pending">
           <div className="dp-icon">◇</div>
           <div>
