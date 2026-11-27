@@ -186,9 +186,9 @@ const DETAILS = {
     'IDF(t) = ln(1 + (N−df+0.5)/(df+0.5))\nTF 项 = tf(k1+1)/(tf + k1(1−b+b·len/avgdl))',
     'k1 抑制超高词频的边际收益，b 惩罚长文档；两者是搜索排序最常调的两个超参。'],
   'image-cnn': [
-    '把带噪字符图切成 12×12 像素网格|逐层做卷积提取局部纹理，再 ReLU 与最大池化压缩尺寸|展平后接全连接与 Softmax 输出类别概率',
+    '把真实照片下采样成 16×16 灰度网格|卷积核逐行扫描提取边缘，ReLU 与最大池化后跨通道汇合成纹理|展平成 256 维向量，训练得到的分类头输出猫/狗/背景概率',
     'for l = 1 .. L:\n  H = ReLU(Conv3×3(H, K_l) + b_l)\n  H = MaxPool2×2(H)\nz = Flatten(H)\ny = Softmax(W·z + b)',
-    '卷积核共享权重让参数量与图像大小解耦；池化带来平移容忍，但层数过多且无残差时会难训练。'],
+    '卷积核共享权重让参数量与图像大小解耦；池化带来平移容忍。卷积核是固定教学示例，分类头权重由真实照片特征图经 softmax 回归训练得到，类别概率完全由卷积特征算出。'],
   'text-transformer': [
     '按字切分中文句子并映射成词向量|每层多头注意力让 token 互相聚合信息，再经 FFN 与残差归一化|多层堆叠后平均池化，分类头输出情感概率',
     'X⁰ = Embed(tokens)\nfor l = 1 .. L:\n  A = Softmax(QKᵀ/√d)\n  X = LayerNorm(X + A·V)\n  X = LayerNorm(X + FFN(X))\ny = Softmax(W·MeanPool(Xᴸ))',
